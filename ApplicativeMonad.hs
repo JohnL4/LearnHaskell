@@ -1,5 +1,7 @@
-main :: IO ()
-main = do
+module ApplicativeMonad where
+
+demo :: IO ()
+demo = do
   putStrLn $ (++) "Pole after unchecked landings: " $ show
     $ initial -: landLeft 1 -: landRight 1 -: landLeft 2
   putStrLn $ (++) "Pole after unchecked landings which SHOULD cause an error: " $ show
@@ -33,10 +35,42 @@ maybeLandRight n (left,right)
     | otherwise                    = Nothing  
 
 {-
+MONAD
+=====
+
+class (Applicative m) => Monad m where
+(>>=) :: m a -> (a -> m b) -> m b
+
 APPLICATIVE
 ===========
 
-t1 (a -> b) -> t2 a -> t2 b
+(<*>) :: fr (a -> b) -> fr a -> fr b
 
+Where 'fr' is a Functor.
 
+FUNCTOR
+=======
+
+As a reminder, a Functor is a thing that can be mapped over (e.g., [a], Tree a, Maybe a, etc.)
+
+Has one function, fmap :: (a -> b) -> fr a -> fr b.
+
+PIERRE
+======
+
+This only works because we use Maybe to pass state.  It has nothing to do with >>=.
 -}
+
+data MMaybe a = NNothing | JJust a
+  deriving (Eq, Show, Ord)
+
+data Side = LeftSide | RightSide
+
+land :: Side -> Birds -> MMaybe Pole -> MMaybe Pole
+land _ _ NNothing = NNothing
+land LeftSide n (JJust (left, right)) 
+  | (abs (left + n - right) > 3) = NNothing
+  | otherwise                    = JJust (left + n, right)
+land RightSide n (JJust (left, right))
+  | (abs (left - (right + n)) > 3)  = NNothing
+  | otherwise                       = JJust (left, right + n)
