@@ -1,3 +1,11 @@
+{-
+
+Run with ghci: ```ghci ApplicativeMonadSped.hs```, and invoking the ```main``` function at the ghci prompt.
+
+The result is color-coded unit test output, yay.
+
+-}
+
 module ApplicativeMonadSpec where
 
 import Test.Hspec
@@ -27,11 +35,13 @@ main = hspec $ do
     it "returns a Pole with negative bird counts when too many birds take off" $
       land LeftSide (-3) (JJust (0,0)) `shouldBe` (JJust (-3,0))
   describe "chaining" $ do
-    it "allows (-:)" $
+    it "allows (-:) one time" $
       JJust (0,0) -: land LeftSide 1 `shouldBe` JJust (1,0)
-    it "allows chaining" $
+    it "allows chaining (multiple uses of (-:))" $
       JJust (0,0) -: land LeftSide 3 -: land RightSide 1 -: land LeftSide 1 `shouldBe` (JJust (4,1))
       -- JJust (0,0) -: land LeftSide 3 -: land RightSide 1 `shouldBe` JJust (3,1)
+    it "returns failure on invalid op" $
+      JJust (0,0) -: land LeftSide 3 -: land RightSide 1 -: land LeftSide 1 -: land RightSide (-1) `shouldBe` NNothing
     it "returns failure in middle" $
       JJust (0,0) -: land LeftSide 3 -: land RightSide 1 -: land LeftSide 1 -: land RightSide (-1) -: land RightSide 1
       `shouldBe` NNothing
