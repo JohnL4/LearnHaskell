@@ -42,6 +42,14 @@ main = hspec $ do
       -- JJust (0,0) -: land LeftSide 3 -: land RightSide 1 `shouldBe` JJust (3,1)
     it "returns failure on invalid op" $
       JJust (0,0) -: land LeftSide 3 -: land RightSide 1 -: land LeftSide 1 -: land RightSide (-1) `shouldBe` NNothing
+
+    -- Our money shot:
+
     it "returns failure in middle" $
       JJust (0,0) -: land LeftSide 3 -: land RightSide 1 -: land LeftSide 1 -: land RightSide (-1) -: land RightSide 1
       `shouldBe` NNothing
+
+    -- Note the above occurrences of 'land Side n' are functions with the following type:
+    -- MMaybe Pole -> MMaybe Pole
+    --
+    -- This will not conform to the Monadic '>>=' function, which would be more like: Pole -> MMaybe Pole.

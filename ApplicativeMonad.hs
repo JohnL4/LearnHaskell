@@ -1,3 +1,6 @@
+-- If you are reading this in conjunction with ApplicativeMonadSpec.hs, skip down to where I define class MMaybe and
+-- function `land`.
+
 module ApplicativeMonad where
 
 demo :: IO ()
@@ -24,6 +27,8 @@ landLeft n (left,right) = (left + n,right)
 landRight :: Birds -> Pole -> Pole  
 landRight n (left,right) = (left,right + n)  
 
+-- These "maybe" functions become the "a -> m a" part of the Monad definition of ">>=".  Unused in this example.
+
 maybeLandLeft :: Birds -> Pole -> Maybe Pole  
 maybeLandLeft n (left,right)  
     | abs ((left + n) - right) < 4 = Just (left + n, right)  
@@ -33,6 +38,8 @@ maybeLandRight :: Birds -> Pole -> Maybe Pole
 maybeLandRight n (left,right)  
     | abs (left - (right + n)) < 4 = Just (left, right + n)  
     | otherwise                    = Nothing  
+
+----------------------------------------------------------------
 
 {-
 MONAD
@@ -61,8 +68,13 @@ PIERRE
 This only works because we use Maybe to pass state.  It has nothing to do with >>=.
 -}
 
+-- We define our own version of Maybe so we don't drag in all of Maybe's standard definitions (Functor, Applicative,
+-- Monad, etc.)
+
 data MMaybe a = NNothing | JJust a
   deriving (Eq, Show, Ord)
+
+-- Note that this version of MMaybe is not even a Functor, at this point.
 
 data Side = LeftSide | RightSide
 
