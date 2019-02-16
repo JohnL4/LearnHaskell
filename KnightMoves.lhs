@@ -18,7 +18,6 @@ A stupid litle exercise in which I try to figure out how {\tt do} really works i
 quest'' section of the chapter ``A Fistful of Monads'' of the book \emph{Learn You a Haskell For Great Good!}.
 \end{abstract}
 
-
 The book treats lists as ``indeterminate answers'' (i.e., a list of possible values that the ``answer'' could be, as opposed
 to a single ``answer'' value).
 
@@ -37,10 +36,6 @@ module KnightMoves where
 
 import Control.Monad
 
--- Modules for unit test
-import Test.Hspec
-import Data.Set as Set
-
 -- | (Column, Row)
 type KnightPos = (Int,Int)
 \end{code}
@@ -58,8 +53,8 @@ moveKnight (c,r) = do
     return (c',r')  
 \end{code}
 
-What the heck is is going on here?  The first thing I did was to move that long list out of the code body, using a
-{\tt where} clause to simplify things, hence the {\tt w} in the function name:
+What the heck is is going on here?  The first thing I did was to rewrite that function as {\tt mkw} to move that long
+list out of the code body, using a {\tt where} clause to simplify things (hence the {\tt w} in the function name):
 
 \begin{code}
 -- | "moveKnight where" -- first re-write
@@ -76,23 +71,16 @@ mkw (c,r) = do
 
 Then, we rewrite to translate the {\tt do} into what it represents ({\tt >>=} and {\tt >>} operators).
 
-We also define a
-special {\tt gard} function that does the same thing as {\tt guard}.  Remember, {\tt guard}'s job is to yield either
-{\tt mzero} (from {\tt MonadPlus}), which is just {\tt []} in this case, or {\tt return ()}, which, in the case of the
-{{\tt List} monad, is just {\tt [()]}, the list containing a single empty tuple (also known as ``unit'').
-
-The use of {\tt >>} after {\tt gard} will either substitute another value for the incoming value (if it's {\tt [()]}, or
-fail to do anything if the incoming value is the empty list {\tt []} (because we're mapping a function to the incoming
-list, which, if empty, results in an empty list, no matter what the function is).
-
-Here's the code:
-
 \begin{code}
 -- | 2nd rewrite, without "do"
 mkw2 :: KnightPos -> [KnightPos]
 mkw2 (c,r) =
-  -- do e1 ; e2      =        e1 >> e2
-  -- do p <- e1; e2  =        e1 >>= \p -> e2
+  -- 
+  -- Rules for 'do' rewrite:
+  -- 
+  -- do e1 ; e2       =   e1 >> e2
+  -- do p <- e1; e2   =   e1 >>= \p -> e2
+  -- 
   moves >>= \(c',r') -> gard (c',r') >> [(c',r')]
   where
     moves = [(c+2,r-1),(c+2,r+1),(c-2,r-1),(c-2,r+1)  
@@ -103,7 +91,17 @@ mkw2 (c,r) =
                    else []
 \end{code}
 
-Then we do the exact same thing with another function, {\tt in3}:
+We also define a special {\tt gard} function (intentionally misspelled) that does the same thing as {\tt guard}.
+Remember, {\tt guard}'s job is to yield either {\tt mzero} (from {\tt MonadPlus}), which is just {\tt []} in this case,
+or {\tt return ()}, which, in the case of the {{\tt List} monad, is just {\tt [()]}, the list containing a single empty
+  tuple (also known as ``unit'').
+
+The use of {\tt >>} after {\tt gard} will either substitute another value for the incoming value (if it's {\tt [()]}),
+or fail to do anything if the incoming value is the empty list {\tt []} (because we're mapping a function to the
+incoming list, which, if empty, results in an empty list, no matter what the function is).
+
+Then we do the exact same sort of rewrite with another function from the book's solution, {\tt in3}.  Here's the
+original code:
 
 \begin{code}
 in3 :: KnightPos -> [KnightPos]
@@ -121,32 +119,17 @@ the {\tt >>} operator:
 in32 :: KnightPos -> [KnightPos]
 in32 start =
   mkw2 start >>= \first -> mkw2 first >>= \second -> mkw2 second
+\end{code}
 
+Finally, the book defines the expression that really tells us whether we can reach one position from another in three
+moves.  There no rewrite required; it's just a couple of straight function calls:
+
+\begin{code}
 canReachIn3 :: KnightPos -> KnightPos -> Bool
 canReachIn3 start end = end `elem` in3 start
 \end{code}
 
-\subsection{Unit Test}
-
-The best way, in the long run, to test that we've rewritten the functions properly, as we iteratively edit and test our
-code, is to simply assert that we have done so.  To that end, we write easily-repeatable test code.
-
-\begin{code}
-main :: IO ()
-main = hspec $ do
-  describe "various implementations" $ do
-    it "moveKnight == mkw" $
-\end{code}
-
-(Here follows the actual assertion:)
-
-\begin{code}
-      (Set.fromList $ moveKnight (5,5)) == (Set.fromList $ mkw (5,5))
-    it "mkw == mkw2" $
-      (Set.fromList $ mkw (5,5)) == (Set.fromList $ mkw2 (5,5))
-    it "in3 == in32" $
-      (Set.fromList $ in3 (5,5)) == (Set.fromList $ in32 (5,5))
-\end{code}
+\input{KnightMovesSpec.lhs}
 
 \section{Explanation of How It All Works}
 
@@ -158,9 +141,9 @@ xs >>= f = concat (map f xs)}
 xs >> ys = xs >>= \_ -> ys
 \end{verbatim}
 
-{\tt >>} can be rewritten as {\tt xs >> ys = concat (map (\_ -> ys) xs)}.  You can see that {\tt >>} will substitute
-{\tt ys} for {\tt xs} only if {\tt xs} is non-empty (or non-{\tt fail}, since {\tt fail} is the empty list).  Otherwise,
-{\tt >>} does nothing, and the result is still {\tt []}.
+{\tt >>} can be rewritten as {\tt xs >> ys = concat (map (\char`\\\char`\_ -> ys) xs)}.  You can see that {\tt >>} will
+substitute {\tt ys} for {\tt xs} only if {\tt xs} is non-empty (or non-{\tt fail}, since {\tt fail} is the empty list).
+Otherwise, {\tt >>} does nothing, and the result is still {\tt []}.
 
 In {\tt moveKnight}, we feed an entire list of (possible) knight positions (column, row) into a function, which, {\em for each
 element of the list} (by virtue of {\tt map}), uses the {\tt guard} ({\tt gard}) function to yield either {\tt []} (if
@@ -201,7 +184,13 @@ At the end of all this, we've called {\tt moveKnight} three times, constantly ex
 positions of the knight.  (Remember, we're calling {\tt concat . map} all the time, so we're constantly flattening lists
 of lists.)
 
-At the end of all this, we have a list of moves possible by moving the knight three times.
+At the end of all this, we have a list of moves possible by moving the knight three times.  Then we just ask if our
+desired ending position is in that list.
 
 
 \end{document}
+
+% Local Variables:
+% mode: latex
+% mmm-classes: literate-haskell-latex
+% End:
